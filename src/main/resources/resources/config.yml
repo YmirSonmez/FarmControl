@@ -2,7 +2,7 @@
 # GitHub: https://github.com/froobynooby/FarmControl
 
 # Please don't change this!
-version: 10
+version: 11
 
 # Every how many ticks should we run the profile check / action cycle?
 cycle-period: 600
@@ -10,7 +10,7 @@ cycle-period: 600
 # How long in ticks should we wait before starting the checking tasks following the plugin's start up?
 #  * This is useful when using the 'reactive' mode where it is desirable to ignore the server's performance in the first
 #    few minutes following a restart.
-start-up-delay: 0
+start-up-delay: 1200
 
 # These settings can be specified per world.
 #  * Note: If a world is not specified or if a setting is missing, it will use the settings listed under the default
@@ -20,12 +20,18 @@ world-settings:
     # Which profiles (as given in profiles.yml) should we run?
     profiles:
       # These profiles are constantly run.
+      #  * The profiles enabled by default never remove or kill anything.
       proactive:
         - soft-nerf-animal-farms
-      #  - soft-limit-animal-farms
+        - soft-nerf-villager-halls
+        - soft-limit-animal-farms
+        - limit-spawner-farms
       #  - soft-limit-villager-breeders
+      #  - nerf-item-piles
       #  - trim-animal-farms
       #  - trim-sparse-animal-farms
+      #  - trim-villager-chunks
+      #  - trim-vehicle-piles
 
       # These profiles only run when the server is performing poorly and are progressively undone as performance
       # improves (as defined under the reactive-mode-settings).
@@ -33,8 +39,9 @@ world-settings:
       #    rather than try to mitigate it. That said, there are some reasonable use cases for this mode, such as
       #    allowing your players to keep larger farms at the cost of nerfing them when performance begins to degrade.
       reactive:
-      #  - hard-nerf-animal-farms
+        - hard-nerf-animal-farms
       #  - freeze-animal-farms
+      #  - freeze-monster-farms
 
     # These settings concern the reactive mode for triggering profile check / action cycles.
     reactive-mode-settings:
@@ -98,10 +105,14 @@ world-settings:
       younger-than: 0
 
       # Which types of mobs should we not perform actions on?
+      #  * Categories (e.g. "category:villager") can be used here, as in profiles.yml.
       type:
-        - chest_boat
-        - minecart_chest
+        - "category:chest-boat"
+        - chest_minecart
+        - hopper_minecart
         - trident
+        - wandering_trader
+        - trader_llama
       #  - villager
 
       # For which metadata should we not perform actions on a mob?
@@ -114,6 +125,7 @@ world-settings:
         - infernalMetadata # Infernal mobs from the plugin InfernalMobs.
         - NPC # NPCs from the plugin Citizens.
         - shopkeeper # Shopkeepers from the plugin Shopkeepers.
+        - MythicMob # Mobs from the plugin MythicMobs.
 
     # These settings concern properties of actions.
     action-settings:
@@ -151,11 +163,23 @@ world-settings:
         disable-collisions:
           tempt: true
 
+        disable-pathfinding:
+          damage: true
+
+          target: true
+
+          tempt: true
+
         disable-breeding:
           # You have to interact with an animal to breed it, so never undo this action on interact.
           interact: false
 
           # Holding the food required to breed an animal will tempt it, so never undo this action on tempt.
+          tempt: false
+
+        lock-breeding:
+          interact: false
+
           tempt: false
 
 # These settings concern how we determine the server's MSPT.

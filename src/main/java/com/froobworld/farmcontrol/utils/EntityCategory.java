@@ -33,6 +33,44 @@ public class EntityCategory {
         register(new EntityCategory("category:mob", true, Mob.class));
         register(new EntityCategory("category:vehicle", true, Boat.class, Minecart.class));
         register(new EntityCategory("category:projectile", true, Projectile.class));
+        register(new EntityCategory("category:villager", true, AbstractVillager.class));
+        register(new EntityCategory("category:water-animal", true, WaterMob.class));
+        register(new EntityCategory("category:chest-boat", true, ChestBoat.class));
+
+        // names of entity types from before they were renamed or split up, so that older configurations keep working
+        registerLegacy(new EntityCategory("chest_boat", true, ChestBoat.class));
+        registerLegacy(new EntityCategory("boat", entityClass -> Boat.class.isAssignableFrom(entityClass) && !ChestBoat.class.isAssignableFrom(entityClass)));
+        registerLegacy(new EntityCategory("potion", true, ThrownPotion.class));
+        registerLegacyAlias("minecart_chest", "chest_minecart");
+        registerLegacyAlias("minecart_hopper", "hopper_minecart");
+        registerLegacyAlias("minecart_tnt", "tnt_minecart");
+        registerLegacyAlias("minecart_furnace", "furnace_minecart");
+        registerLegacyAlias("minecart_command", "command_block_minecart");
+        registerLegacyAlias("minecart_mob_spawner", "spawner_minecart");
+        registerLegacyAlias("snowman", "snow_golem");
+        registerLegacyAlias("mushroom_cow", "mooshroom");
+        registerLegacyAlias("dropped_item", "item");
+        registerLegacyAlias("primed_tnt", "tnt");
+        registerLegacyAlias("firework", "firework_rocket");
+        registerLegacyAlias("fishing_hook", "fishing_bobber");
+        registerLegacyAlias("ender_crystal", "end_crystal");
+        registerLegacyAlias("ender_signal", "eye_of_ender");
+        registerLegacyAlias("thrown_exp_bottle", "experience_bottle");
+        registerLegacyAlias("leash_hitch", "leash_knot");
+        registerLegacyAlias("lightning", "lightning_bolt");
+    }
+
+    private static void registerLegacy(EntityCategory entityCategory) {
+        if (!entityCategory.memberTypes.isEmpty()) {
+            entityCategoryMap.putIfAbsent(entityCategory.name, entityCategory);
+        }
+    }
+
+    private static void registerLegacyAlias(String legacyName, String currentName) {
+        EntityCategory entityCategory = entityCategoryMap.get(currentName);
+        if (entityCategory != null) {
+            entityCategoryMap.putIfAbsent(legacyName, entityCategory);
+        }
     }
 
     private static void register(EntityCategory entityCategory) {
@@ -40,17 +78,22 @@ public class EntityCategory {
     }
 
     private EntityCategory(String name, boolean allowInheritance, Class<?>... memberClasses) {
+        this(name, entityClass -> {
+            for (Class<?> memberClass : memberClasses) {
+                if (allowInheritance ? memberClass.isAssignableFrom(entityClass) : memberClass.equals(entityClass)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
+    private EntityCategory(String name, Predicate<Class<?>> memberClassPredicate) {
         this.name = name;
         for (EntityType entityType : EntityType.values()) {
             Class<?> entityClass = entityType.getEntityClass();
-            if (entityClass == null) {
-                continue;
-            }
-            for (Class<?> memberClass : memberClasses) {
-                if (allowInheritance ? memberClass.isAssignableFrom(entityClass) : memberClass.equals(entityClass)) {
-                    memberTypes.add(entityType);
-                    break;
-                }
+            if (entityClass != null && memberClassPredicate.test(entityClass)) {
+                memberTypes.add(entityType);
             }
         }
     }

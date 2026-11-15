@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class FcConfig extends NabConfiguration {
-    private static final int CURRENT_VERSION = 10;
+    private static final int CURRENT_VERSION = 11;
 
     public FcConfig(FarmControl farmControl) {
         super(

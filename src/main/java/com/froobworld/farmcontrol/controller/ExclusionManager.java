@@ -7,7 +7,10 @@ import org.bukkit.World;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 
+import com.froobworld.farmcontrol.utils.EntityCategory;
+
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,7 +18,7 @@ import java.util.function.Predicate;
 
 public class ExclusionManager {
     private final FarmControl farmControl;
-    private final Set<String> warnedSpawnReasons = ConcurrentHashMap.newKeySet(); // only warn once, the predicate is rebuilt every cycle
+    private final Set<String> warnedNames = ConcurrentHashMap.newKeySet(); // only warn once, the predicate is rebuilt every cycle
 
     public ExclusionManager(FarmControl farmControl) {
         this.farmControl = farmControl;
@@ -31,10 +34,12 @@ public class ExclusionManager {
         boolean excludePatrolLeaders = exclusionSettings.patrolLeader.get();
         Set<EntityType> excludeType = EnumSet.noneOf(EntityType.class);
         for (String typeName : exclusionSettings.type.get()) {
-            for (EntityType entityType : EntityType.values()) {
-                if (entityType.toString().equalsIgnoreCase(typeName)) {
-                    excludeType.add(entityType);
-                }
+            // accepts the same names as profiles do: entity types, categories and legacy type names
+            EntityCategory entityCategory = EntityCategory.ofName(typeName);
+            if (entityCategory != null) {
+                excludeType.addAll(EntityCategory.unionOfMemberTypes(List.of(entityCategory)));
+            } else if (warnedNames.add("type:" + typeName)) {
+                farmControl.getLogger().warning("Unknown entity type '" + typeName + "' in the exclusion settings for world '" + world.getName() + "'.");
             }
         }
         long excludeTicksLived = exclusionSettings.youngerThan.get();
@@ -46,7 +51,7 @@ public class ExclusionManager {
             try {
                 excludeSpawnReason.add(SpawnReason.valueOf(spawnReasonName.toUpperCase(Locale.ROOT).replace('-', '_')));
             } catch (IllegalArgumentException e) {
-                if (warnedSpawnReasons.add(spawnReasonName)) {
+                if (warnedNames.add("spawn-reason:" + spawnReasonName)) {
                     farmControl.getLogger().warning("Unknown spawn reason '" + spawnReasonName + "' in the exclusion settings for world '" + world.getName() + "'.");
                 }
             }
