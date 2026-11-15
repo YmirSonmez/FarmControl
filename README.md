@@ -11,6 +11,8 @@ FarmControl is a Paper plugin that allows you to control certain properties of f
 * Reduce unnecessary random movement within mob farms.
 * Disable the AI of mobs in farms.
 * Limit the number of entities allowed in an area.
+* Prevent mobs from spawning at all once a farm is full (`prevent-spawn`), rather than removing them afterwards.
+* Target or exclude mobs by how they came into the world (spawner, breeding, natural, ...).
 * Highly configurable - allowing you to tailor the plugin to your needs.
 * Low impact - with the brunt of the plugin's processing performed asynchronously.
 

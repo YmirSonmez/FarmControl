@@ -3,6 +3,7 @@ package com.froobworld.farmcontrol.controller;
 import com.froobworld.farmcontrol.FarmControl;
 import com.froobworld.farmcontrol.controller.action.*;
 import com.froobworld.farmcontrol.controller.breeding.BreedingBlocker;
+import com.froobworld.farmcontrol.controller.spawn.SpawnBlocker;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -13,7 +14,18 @@ public class ActionManager {
     private final Map<String, Action> actions = new HashMap<>();
     private final Collection<Action> actionsView = Collections.unmodifiableCollection(actions.values());
 
+    private SpawnBlocker spawnBlocker;
+
+    public SpawnBlocker getSpawnBlocker() {
+        return spawnBlocker;
+    }
+
     public void addDefaults(FarmControl farmControl) {
+        spawnBlocker = new SpawnBlocker(farmControl);
+        addAction(new PreventSpawnAction());
+        addAction(new DisableMobPickupAction());
+        addAction(new DisablePathfindingAction(farmControl));
+        addAction(new LockBreedingAction(farmControl));
         addAction(new DisableCollisionsAction());
         addAction(new KillAction());
         addAction(new RemoveAction());

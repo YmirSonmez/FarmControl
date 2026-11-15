@@ -13,7 +13,10 @@ import com.froobworld.farmcontrol.controller.action.Action;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import com.froobworld.farmcontrol.hook.scheduler.SchedulerHook;
 import com.froobworld.farmcontrol.utils.MixedEntitySet;
+import com.froobworld.farmcontrol.controller.spawn.SpawnBlocker;
+import org.bukkit.Chunk;
 import org.bukkit.World;
+import org.bukkit.entity.EntityType;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -28,8 +31,10 @@ public class ActionAllocationTask implements Runnable {
     private final Predicate<SnapshotEntity> shouldExcludePredicate;
     private final Collection<Action> allActions;
     private final CycleTracker cycleTracker;
+    private final SpawnBlocker spawnBlocker;
 
-    public ActionAllocationTask(FarmController farmController, World world, SchedulerHook schedulerHook, Set<Trigger> triggers, List<SnapshotEntity> snapshotEntities, Map<Trigger, Set<ActionProfile>> actionProfiles, Predicate<SnapshotEntity> shouldExcludePredicate, Collection<Action> allActions, CycleTracker cycleTracker) {
+    public ActionAllocationTask(FarmController farmController, World world, SchedulerHook schedulerHook, Set<Trigger> triggers, List<SnapshotEntity> snapshotEntities, Map<Trigger, Set<ActionProfile>> actionProfiles, Predicate<SnapshotEntity> shouldExcludePredicate, Collection<Action> allActions, CycleTracker cycleTracker, SpawnBlocker spawnBlocker) {
+        this.spawnBlocker = spawnBlocker;
         this.farmController = farmController;
         this.world = world;
         this.schedulerHook = schedulerHook;
@@ -46,6 +51,8 @@ public class ActionAllocationTask implements Runnable {
         Map<SnapshotEntity, Set<TriggerActionPair>> triggerActionMap = new HashMap<>();
         Map<SnapshotEntity, Set<TriggerActionPair>> unTriggerActionMap = new HashMap<>();
 
+        Map<Trigger, Map<Long, Set<EntityType>>> spawnBlockedChunks = new HashMap<>();
+
         List<TriggerActionProfilePair> triggerActionProfilePairs = new ArrayList<>();
         actionProfiles.forEach((trigger, actionProfileSet) -> actionProfileSet.forEach(profile -> triggerActionProfilePairs.add(new TriggerActionProfilePair(trigger, profile))));
 
@@ -54,7 +61,18 @@ public class ActionAllocationTask implements Runnable {
             boolean removes = triggerProfilePair.actionProfile.removes();
             Set<SnapshotEntity> removedEntities = removes ? new HashSet<>() : Collections.emptySet();
             EntityGrouperResult result = EntityGrouper.groupEntities(snapshotEntities, triggerProfilePair.actionProfile.getGroupDefinition());
+            Set<Action> entityActions = triggerProfilePair.actionProfile.getEntityActions();
             for (Group group : result.getGroups()) {
+                if (triggerProfilePair.actionProfile.preventsSpawn() && group.meetsCondition()) {
+                    Map<Long, Set<EntityType>> chunkBlockedTypes = spawnBlockedChunks.computeIfAbsent(triggerProfilePair.trigger, t -> new HashMap<>());
+                    Set<EntityType> blockedTypes = triggerProfilePair.actionProfile.getGroupDefinition().getEffectiveTypes();
+                    for (SnapshotEntity member : group.getMembers()) {
+                        chunkBlockedTypes.computeIfAbsent(Chunk.getChunkKey(member.getChunkX(), member.getChunkZ()), k -> EnumSet.noneOf(EntityType.class)).addAll(blockedTypes);
+                    }
+                }
+                if (entityActions.isEmpty()) {
+                    continue;
+                }
                 MixedEntitySet.MixedEntityIterator iterator = group.getMembers().iterator();
                 while (group.meetsCondition() && iterator.hasNext()) {
                     SnapshotEntity next = iterator.next();
@@ -68,8 +86,8 @@ public class ActionAllocationTask implements Runnable {
                     }
                     Set<TriggerActionPair> triggerActionPairs = triggerActionMap.computeIfAbsent(next, e -> new HashSet<>());
                     Set<TriggerActionPair> unTriggerActionPairs = unTriggerActionMap.getOrDefault(next, Collections.emptySet());
-                    for (Action action : triggerProfilePair.actionProfile.getActions()) {
-                        if (!action.getEntityClass().isAssignableFrom(next.getEntityClass())) {
+                    for (Action action : entityActions) {
+                        if (!action.isApplicableTo(next)) {
                             continue;
                         }
                         TriggerActionPair triggerActionPair = new TriggerActionPair(triggerProfilePair.trigger, action);
@@ -104,6 +122,10 @@ public class ActionAllocationTask implements Runnable {
                     }
                 }
             }
+        }
+
+        for (Trigger trigger : triggers) {
+            spawnBlocker.setBlockedChunks(world, trigger, spawnBlockedChunks.get(trigger));
         }
 
         farmController.submitActionPerformTask(new ActionPerformTask(world, schedulerHook, triggerActionMap, unTriggerActionMap, cycleTracker));

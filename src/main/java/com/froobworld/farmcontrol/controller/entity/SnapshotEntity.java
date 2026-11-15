@@ -4,6 +4,7 @@ import com.froobworld.farmcontrol.data.FcData;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.entity.*;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.material.Colorable;
 
 import java.util.ArrayList;
@@ -26,6 +27,9 @@ public class SnapshotEntity {
     private final int ticksLived;
     private final boolean pickupable;
     private final boolean mounted;
+    private final boolean adult;
+    private final boolean ticking;
+    private final CreatureSpawnEvent.SpawnReason spawnReason;
     private final List<Object> classifications = new ArrayList<>(2);
 
     public SnapshotEntity(Entity entity) {
@@ -45,6 +49,9 @@ public class SnapshotEntity {
         this.pickupable = entity instanceof AbstractArrow arrow && arrow.getPickupStatus() == AbstractArrow.PickupStatus.ALLOWED;
         this.ticksLived = entity.getTicksLived();
         this.mounted = !entity.getPassengers().isEmpty();
+        this.adult = !(entity instanceof Ageable ageable) || ageable.isAdult();
+        this.ticking = entity.isTicking();
+        this.spawnReason = entity.getEntitySpawnReason();
         // boats need no further classification, each wood type is its own entity type
         classifications.add(entityType);
         if (entity instanceof Colorable colorable) {
@@ -131,6 +138,21 @@ public class SnapshotEntity {
 
     public boolean isMounted() {
         return mounted;
+    }
+
+    public boolean isAdult() {
+        return adult;
+    }
+
+    /**
+     * @return Whether the entity was being ticked, i.e. it was not outside of simulation distance.
+     */
+    public boolean isTicking() {
+        return ticking;
+    }
+
+    public CreatureSpawnEvent.SpawnReason getSpawnReason() {
+        return spawnReason;
     }
 
     public int getTicksLived() {

@@ -7,26 +7,22 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-public class HistoryCommand implements CommandExecutor {
+public class HistoryCommand {
     private final FarmControl farmControl;
 
     public HistoryCommand(FarmControl farmControl) {
         this.farmControl = farmControl;
     }
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
+    public void execute(CommandSender sender) {
         List<CycleStats> cycleHistory = farmControl.getFarmController().getCycleHistoryManager().getCycleHistory();
         if (cycleHistory.isEmpty()) {
             sender.sendMessage(Component.text("There is no history to display.", NamedTextColor.RED));
-            return true;
+            return;
         }
 
         sender.sendMessage(Component.text("Most recent history:", NamedTextColor.GOLD));
@@ -52,7 +48,5 @@ public class HistoryCommand implements CommandExecutor {
             }
             sender.sendMessage(builder.hoverEvent(HoverEvent.showText(cycleStats.getBreakdown())).build());
         }
-
-        return true;
     }
 }

@@ -2,7 +2,7 @@
 # GitHub: https://github.com/froobynooby/FarmControl
 
 # Please don't change this!
-version: 9
+version: 10
 
 # Every how many ticks should we run the profile check / action cycle?
 cycle-period: 600
@@ -83,6 +83,16 @@ world-settings:
 
       # Should we not perform actions on mobs that are mounted (e.g. a boat with a villager in it)?
       mounted: true
+
+      # Should we not perform actions on mobs that are not being ticked (i.e. are outside of simulation distance)?
+      #  * Such mobs cost the server next to nothing, but still count towards the size of a group.
+      not-ticking: false
+
+      # Mobs that came into the world for which of these reasons should we not perform actions on?
+      #  * See https://jd.papermc.io/paper/org/bukkit/event/entity/CreatureSpawnEvent.SpawnReason.html for the reasons.
+      spawn-reason:
+      #  - spawner_egg
+      #  - custom
 
       # Should we not perform actions on mobs that are younger than this value (in ticks)?
       younger-than: 0

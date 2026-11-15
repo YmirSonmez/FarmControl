@@ -1,19 +1,19 @@
 package com.froobworld.farmcontrol.hook.tick;
 
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
-import com.destroystokyo.paper.event.server.ServerTickStartEvent;
 import com.froobworld.farmcontrol.FarmControl;
 import org.bukkit.Bukkit;
+import org.bukkit.ServerTickManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 
 import java.util.function.LongConsumer;
 
 public class PaperTickHook implements TickHook, Listener {
+    private static final double NANOS_PER_MILLI = 1_000_000.0;
     private static final LongConsumer[] NO_CONSUMERS = new LongConsumer[0];
     private LongConsumer[] tickConsumers = NO_CONSUMERS; // copy-on-write, only touched on the main thread
-    private long start;
-    private boolean started;
+    private final ServerTickManager tickManager = Bukkit.getServerTickManager();
 
     @Override
     public void register(FarmControl farmControl) {
@@ -21,18 +21,11 @@ public class PaperTickHook implements TickHook, Listener {
     }
 
     @EventHandler
-    public void onTickStart(ServerTickStartEvent event) {
-        start = System.nanoTime();
-        started = true;
-    }
-
-    @EventHandler
     public void onTickEnd(ServerTickEndEvent event) {
-        if (!started) {
-            return;
+        if (tickConsumers.length == 0 || !tickManager.isRunningNormally()) {
+            return; // ticks while frozen, stepping or sprinting say nothing about the server's performance
         }
-        started = false;
-        long duration = System.nanoTime() - start;
+        long duration = (long) (event.getTickDuration() * NANOS_PER_MILLI);
         for (LongConsumer consumer : tickConsumers) {
             consumer.accept(duration);
         }

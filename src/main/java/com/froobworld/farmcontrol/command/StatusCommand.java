@@ -4,22 +4,18 @@ import com.froobworld.farmcontrol.FarmControl;
 import com.froobworld.farmcontrol.controller.FarmController;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import com.froobworld.farmcontrol.data.FcData;
-import org.bukkit.Bukkit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class StatusCommand implements CommandExecutor {
+public class StatusCommand {
     private final FarmControl farmControl;
 
     public StatusCommand(FarmControl farmControl) {
@@ -27,23 +23,7 @@ public class StatusCommand implements CommandExecutor {
     }
 
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String cl, @NotNull String[] args) {
-        World world;
-        if (args.length == 1) {
-            if (sender instanceof Player) {
-                world = ((Player) sender).getWorld();
-            } else {
-                sender.sendMessage(Component.text("You must specify a world.", NamedTextColor.RED));
-                return false;
-            }
-        } else {
-            world = Bukkit.getWorld(args[1]);
-        }
-        if (world == null) {
-            sender.sendMessage(Component.text("Unknown world.", NamedTextColor.RED));
-            return true;
-        }
+    public void execute(CommandSender sender, World world) {
         AtomicInteger entityCount = new AtomicInteger(0);
         AtomicInteger affectedCount = new AtomicInteger(0);
         Map<String, AtomicInteger> actionCount = new HashMap<>();
@@ -81,7 +61,6 @@ public class StatusCommand implements CommandExecutor {
                         .build()));
             }
         });
-        return true;
     }
 
 }

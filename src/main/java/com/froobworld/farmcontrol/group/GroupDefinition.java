@@ -5,14 +5,18 @@ import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import com.froobworld.farmcontrol.utils.EntityCategory;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.EntityType;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.Predicate;
 
 public class GroupDefinition {
     private final Set<EntityCategory> memberCategories;
     private final Set<EntityCategory> excludedCategories;
+    private final Set<EntityType> effectiveTypes;
     private final Predicate<SnapshotEntity> typePredicate;
     private final Predicate<SnapshotEntity> excludeTypePredicate;
     private final int size;
@@ -22,7 +26,7 @@ public class GroupDefinition {
     private final boolean ignoreVerticalDistance;
     private final boolean pure;
 
-    public GroupDefinition(Set<EntityCategory> memberCategories, Set<EntityCategory> excludedCategories, int size, double distance, boolean sameChunk, boolean ignoreVerticalDistance, boolean pure) {
+    public GroupDefinition(Set<EntityCategory> memberCategories, Set<EntityCategory> excludedCategories, Set<SpawnReason> spawnReasons, int size, double distance, boolean sameChunk, boolean ignoreVerticalDistance, boolean pure) {
         this.memberCategories = memberCategories;
         this.excludedCategories = excludedCategories;
         this.size = size;
@@ -34,7 +38,13 @@ public class GroupDefinition {
         // types must be explicitly specified, so an empty set of categories matches nothing
         Set<EntityType> memberTypes = EntityCategory.unionOfMemberTypes(memberCategories);
         Set<EntityType> excludedTypes = EntityCategory.unionOfMemberTypes(excludedCategories);
-        this.typePredicate = snapshotEntity -> memberTypes.contains(snapshotEntity.getEntityType());
+        this.effectiveTypes = EnumSet.copyOf(memberTypes);
+        this.effectiveTypes.removeAll(excludedTypes);
+        if (spawnReasons.isEmpty()) {
+            this.typePredicate = snapshotEntity -> memberTypes.contains(snapshotEntity.getEntityType());
+        } else {
+            this.typePredicate = snapshotEntity -> memberTypes.contains(snapshotEntity.getEntityType()) && spawnReasons.contains(snapshotEntity.getSpawnReason());
+        }
         this.excludeTypePredicate = snapshotEntity -> excludedTypes.contains(snapshotEntity.getEntityType());
     }
 
@@ -44,6 +54,13 @@ public class GroupDefinition {
 
     public Set<EntityCategory> getExcludedCategories() {
         return excludedCategories;
+    }
+
+    /**
+     * @return The entity types that can be a member of a group, i.e. the member types less the excluded types.
+     */
+    public Set<EntityType> getEffectiveTypes() {
+        return effectiveTypes;
     }
 
     public Predicate<SnapshotEntity> getTypePredicate() {
@@ -97,13 +114,21 @@ public class GroupDefinition {
                 excludedCategories.add(entityCategory);
             }
         }
+        Set<SpawnReason> spawnReasons = EnumSet.noneOf(SpawnReason.class);
+        for (String spawnReasonName : section.getStringList("spawn-reasons")) {
+            try {
+                spawnReasons.add(SpawnReason.valueOf(spawnReasonName.toUpperCase(Locale.ROOT).replace('-', '_')));
+            } catch (IllegalArgumentException e) {
+                farmControl.getLogger().warning("Unknown spawn reason '" + spawnReasonName + "' for profile '" + profileName + "'.");
+            }
+        }
         int size = section.getInt("count");
         boolean sameChunk = section.isString("distance") && "same-chunk".equalsIgnoreCase(section.getString("distance"));
         double distance = sameChunk ? 0 : section.getDouble("distance");
         boolean ignoreVerticalDistance = section.getBoolean("ignore-vertical-distance");
         boolean pure = section.getBoolean("pure");
 
-        return new GroupDefinition(memberCategories, excludedCategories, size, distance, sameChunk, ignoreVerticalDistance, pure);
+        return new GroupDefinition(memberCategories, excludedCategories, spawnReasons, size, distance, sameChunk, ignoreVerticalDistance, pure);
     }
 
 }

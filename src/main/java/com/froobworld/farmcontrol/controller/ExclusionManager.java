@@ -5,13 +5,17 @@ import com.froobworld.farmcontrol.config.FcConfig;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import org.bukkit.World;
 import org.bukkit.entity.EntityType;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 public class ExclusionManager {
     private final FarmControl farmControl;
+    private final Set<String> warnedSpawnReasons = ConcurrentHashMap.newKeySet(); // only warn once, the predicate is rebuilt every cycle
 
     public ExclusionManager(FarmControl farmControl) {
         this.farmControl = farmControl;
@@ -36,6 +40,17 @@ public class ExclusionManager {
         long excludeTicksLived = exclusionSettings.youngerThan.get();
         boolean excludePickupable = exclusionSettings.pickupable.get();
         boolean excludeMounted = exclusionSettings.mounted.get();
+        boolean excludeNotTicking = exclusionSettings.notTicking.get();
+        Set<SpawnReason> excludeSpawnReason = EnumSet.noneOf(SpawnReason.class);
+        for (String spawnReasonName : exclusionSettings.spawnReason.get()) {
+            try {
+                excludeSpawnReason.add(SpawnReason.valueOf(spawnReasonName.toUpperCase(Locale.ROOT).replace('-', '_')));
+            } catch (IllegalArgumentException e) {
+                if (warnedSpawnReasons.add(spawnReasonName)) {
+                    farmControl.getLogger().warning("Unknown spawn reason '" + spawnReasonName + "' in the exclusion settings for world '" + world.getName() + "'.");
+                }
+            }
+        }
         return snapshotEntity -> {
             if (excludeLeashed && snapshotEntity.isLeashed()) {
                 return true;
@@ -53,6 +68,12 @@ public class ExclusionManager {
                 return true;
             }
             if (excludePickupable && snapshotEntity.isPickupable()) {
+                return true;
+            }
+            if (excludeNotTicking && !snapshotEntity.isTicking()) {
+                return true;
+            }
+            if (excludeSpawnReason.contains(snapshotEntity.getSpawnReason())) {
                 return true;
             }
             if (excludeMounted && snapshotEntity.isMounted()) {

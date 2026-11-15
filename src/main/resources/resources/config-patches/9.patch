@@ -1,0 +1,11 @@
+[add-field]
+before=younger-than
+key=world-settings.default.exclusion-settings.not-ticking
+value=false
+comment=# Should we not perform actions on mobs that are not being ticked (i.e. are outside of simulation distance)?\n#  * Such mobs cost the server next to nothing, but still count towards the size of a group.
+
+[add-field]
+before=younger-than
+key=world-settings.default.exclusion-settings.spawn-reason
+body=#  - spawner_egg\n#  - custom
+comment=# Mobs that came into the world for which of these reasons should we not perform actions on?\n#  * See https://jd.papermc.io/paper/org/bukkit/event/entity/CreatureSpawnEvent.SpawnReason.html for the reasons.

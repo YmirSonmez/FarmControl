@@ -8,6 +8,7 @@ import com.froobworld.farmcontrol.controller.tracker.CycleTracker;
 import com.froobworld.farmcontrol.controller.trigger.Trigger;
 import com.froobworld.farmcontrol.controller.trigger.UntriggerStrategy;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.froobworld.farmcontrol.controller.spawn.SpawnBlocker;
 import org.bukkit.World;
 
 import java.util.*;
@@ -36,6 +37,7 @@ public class TriggerCheckTask implements Runnable {
 
 
     public void run() {
+        SpawnBlocker spawnBlocker = farmControl.getActionManager().getSpawnBlocker();
         CycleTracker cycleTracker = farmController.getCycleHistoryManager().startCycleTracker(worldTriggerProfilesMap.keySet());
         for (World world : worldTriggerProfilesMap.keySet()) {
             worldLastTriggerCount.putIfAbsent(world.getUID(), new HashMap<>());
@@ -52,6 +54,7 @@ public class TriggerCheckTask implements Runnable {
                     worldLastTriggerCount.get(world.getUID()).put(trigger, 0);
                 } else if (triggerStatus == Trigger.TriggerStatus.UNTRIGGERED) {
                     untriggerStrategyMap.put(trigger, trigger.getUntriggerStrategy(world));
+                    spawnBlocker.clear(world, trigger);
                     worldLastTriggerCount.get(world.getUID()).compute(trigger, (t, v) -> v == null ? 1 : (v + 1));
                 }
             }
@@ -63,11 +66,14 @@ public class TriggerCheckTask implements Runnable {
             }
             completableFuture.thenAccept(snapshotEntities -> {
                 if (snapshotEntities == null || snapshotEntities.isEmpty()) {
+                    for (Trigger trigger : triggeredTriggers) {
+                        spawnBlocker.clear(world, trigger); // no groups left to block spawns for
+                    }
                     cycleTracker.signalCompletion(world);
                     return;
                 }
                 if (!profilesToRun.isEmpty()) {
-                    executorService.submit(new ActionAllocationTask(farmController, world, farmControl.getHookManager().getSchedulerHook(), triggeredTriggers, snapshotEntities, profilesToRun, farmControl.getExclusionManager().getExclusionPredicate(world), farmControl.getActionManager().getActions(), cycleTracker));
+                    executorService.submit(new ActionAllocationTask(farmController, world, farmControl.getHookManager().getSchedulerHook(), triggeredTriggers, snapshotEntities, profilesToRun, farmControl.getExclusionManager().getExclusionPredicate(world), farmControl.getActionManager().getActions(), cycleTracker, spawnBlocker));
                 } else {
                     cycleTracker.signalCompletion(world);
                 }

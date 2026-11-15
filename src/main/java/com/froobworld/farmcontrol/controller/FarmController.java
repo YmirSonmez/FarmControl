@@ -83,6 +83,7 @@ public class FarmController {
 
     public void removeWorld(World world) {
         worldTriggerProfilesMap.remove(world);
+        farmControl.getActionManager().getSpawnBlocker().clear(world);
         farmControl.getHookManager().getEntityGetterHook().getEntities(world).thenAccept(entities -> {
             for (Entity entity : entities) {
                 farmControl.getHookManager().getSchedulerHook().runEntityTaskAsap(

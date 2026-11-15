@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class FcConfig extends NabConfiguration {
-    private static final int CURRENT_VERSION = 9;
+    private static final int CURRENT_VERSION = 10;
 
     public FcConfig(FarmControl farmControl) {
         super(
@@ -107,6 +107,12 @@ public class FcConfig extends NabConfiguration {
 
             @Entry(key = "mounted")
             public final ConfigEntry<Boolean> mounted = new ConfigEntry<>();
+
+            @Entry(key = "not-ticking")
+            public final ConfigEntry<Boolean> notTicking = new ConfigEntry<>();
+
+            @Entry(key = "spawn-reason")
+            public final ConfigEntry<List<String>> spawnReason = ConfigEntries.stringListEntry();
 
             @Entry(key = "younger-than")
             public final ConfigEntry<Long> youngerThan = ConfigEntries.longEntry();

@@ -6,11 +6,6 @@ authors: [froobynooby]
 description: A farm limiter and governor.
 folia-supported: true
 
-commands:
-  farmcontrol:
-    description: Base command for FarmControl.
-    aliases: [fc]
-
 permissions:
   farmcontrol.command.*:
     default: op

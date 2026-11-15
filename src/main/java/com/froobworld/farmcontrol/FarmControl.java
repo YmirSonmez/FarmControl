@@ -7,11 +7,9 @@ import com.froobworld.farmcontrol.controller.action.RemoveRandomMovementAction;
 import com.froobworld.farmcontrol.message.MessageManager;
 import com.froobworld.farmcontrol.metrics.FcMetrics;
 import org.bukkit.Bukkit;
-import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
-import java.util.Objects;
 
 public class FarmControl extends JavaPlugin {
     private FcConfig fcConfig;
@@ -115,10 +113,6 @@ public class FarmControl extends JavaPlugin {
     }
 
     public void registerCommands() {
-        FarmControlCommand farmControlCommand = new FarmControlCommand(this);
-        PluginCommand command = Objects.requireNonNull(getCommand("farmcontrol"));
-        command.setExecutor(farmControlCommand);
-        command.setTabCompleter(farmControlCommand.getTabCompleter());
-        command.setPermission("farmcontrol.command.farmcontrol");
+        new FarmControlCommand(this).register();
     }
 }

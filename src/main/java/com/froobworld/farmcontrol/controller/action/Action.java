@@ -1,5 +1,6 @@
 package com.froobworld.farmcontrol.controller.action;
 
+import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import org.bukkit.entity.Entity;
 
 public abstract class Action {
@@ -34,6 +35,21 @@ public abstract class Action {
 
     public boolean undoOnUnload() {
         return undoOnUnload;
+    }
+
+    /**
+     * @return Whether this action applies to a group as a whole rather than to each of its members, in which case
+     * {@link #doAction(Entity)} and {@link #undoAction(Entity)} are never called.
+     */
+    public boolean isGroupAction() {
+        return false;
+    }
+
+    /**
+     * @return Whether this action can currently be performed on the given entity.
+     */
+    public boolean isApplicableTo(SnapshotEntity entity) {
+        return entityClass.isAssignableFrom(entity.getEntityClass());
     }
 
     public abstract void doAction(Entity entity);
