@@ -17,8 +17,8 @@ public class ProtoGroup {
         this.members = new ArrayList<>();
         this.members.add(initialMember);
         initialType = initialMember.getEntityType();
-        initialChunkX = initialMember.getLocation().getBlockX() >> 4;
-        initialChunkZ = initialMember.getLocation().getBlockZ() >> 4;
+        initialChunkX = initialMember.getChunkX();
+        initialChunkZ = initialMember.getChunkZ();
     }
 
     public List<SnapshotEntity> getMembers() {
@@ -42,25 +42,26 @@ public class ProtoGroup {
             return false;
         }
         if (definition.isSameChunk()) {
-            return entity.getLocation().getBlockX() >> 4 == initialChunkX && entity.getLocation().getBlockZ() >> 4 == initialChunkZ;
+            return entity.getChunkX() == initialChunkX && entity.getChunkZ() == initialChunkZ;
         }
+        final double maxDistance = definition.getDistance();
+        final boolean ignoreVerticalDistance = definition.ignoreVerticalDistance();
+        final int x = entity.getBlockX(), y = entity.getBlockY(), z = entity.getBlockZ();
         int remainingMembers = members.size();
         int minDistance = -1;
-        for (SnapshotEntity member : members) {
+        for (int i = 0, size = members.size(); i < size; i++) {
+            SnapshotEntity member = members.get(i);
             remainingMembers--;
-            int distance = Math.max(
-                    Math.abs(member.getLocation().getBlockX() - entity.getLocation().getBlockX()),
-                    Math.max(
-                            definition.ignoreVerticalDistance() ? 0 : (Math.abs(member.getLocation().getBlockY() - entity.getLocation().getBlockY())),
-                            Math.abs(member.getLocation().getBlockZ() - entity.getLocation().getBlockZ())
-                    )
-            );
+            int distance = Math.max(Math.abs(member.getBlockX() - x), Math.abs(member.getBlockZ() - z));
+            if (!ignoreVerticalDistance) {
+                distance = Math.max(distance, Math.abs(member.getBlockY() - y));
+            }
             if (minDistance < 0 || distance < minDistance) {
                 minDistance = distance;
             }
-            if (distance <= definition.getDistance()) {
+            if (distance <= maxDistance) {
                 return true;
-            } else if (minDistance > (remainingMembers + 1) * definition.getDistance()) {
+            } else if (minDistance > (remainingMembers + 1) * maxDistance) {
                 return false;
             }
         }

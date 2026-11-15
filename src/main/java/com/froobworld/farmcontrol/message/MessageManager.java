@@ -1,32 +1,36 @@
 package com.froobworld.farmcontrol.message;
 
 import com.froobworld.farmcontrol.FarmControl;
-import com.froobworld.farmcontrol.message.adapter.MessageAdapter;
-import com.froobworld.farmcontrol.message.adapter.PaperMessageAdapter;
-import com.froobworld.farmcontrol.message.adapter.SpigotMessageAdapter;
+import com.froobworld.farmcontrol.message.config.MessagesConfig;
+import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 
 public class MessageManager {
     private final FarmControl farmControl;
-    private MessageAdapter messageAdapter;
+    private MessagesConfig messagesConfig;
 
     public MessageManager(FarmControl farmControl) {
         this.farmControl = farmControl;
     }
 
     public void reload() throws Exception {
-        if (PaperMessageAdapter.isCompatible()) {
-            messageAdapter = new PaperMessageAdapter(farmControl);
-        } else {
-            messageAdapter = new SpigotMessageAdapter();
-        }
+        MessagesConfig newMessagesConfig = new MessagesConfig(farmControl);
+        newMessagesConfig.load();
+        messagesConfig = newMessagesConfig;
     }
 
     public void sendMessage(Player player, String messageKey) {
-        if (messageAdapter == null) {
-            throw new IllegalStateException("No message adapter");
+        if (messagesConfig == null) {
+            throw new IllegalStateException("Messages have not been loaded");
         }
-        messageAdapter.sendMessage(player, messageKey);
+        player.sendMessage(getMessage(messageKey));
+    }
+
+    private Component getMessage(String messageKey) {
+        if (messageKey.equalsIgnoreCase("breeding-disabled")) {
+            return messagesConfig.breedingDisabled.get();
+        }
+        throw new IllegalArgumentException("No message for key '" + messageKey + "'");
     }
 
 }

@@ -2,15 +2,12 @@ package com.froobworld.farmcontrol.controller.tracker;
 
 import com.froobworld.farmcontrol.controller.action.Action;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.EntityType;
 
 import java.util.*;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class CycleStats {
     private final long startTime;
@@ -32,7 +29,7 @@ public class CycleStats {
     }
 
     public long getDurationMillis() {
-        return startTime - endTime;
+        return endTime - startTime;
     }
 
     public int getAffectedEntityCount() {
@@ -43,28 +40,36 @@ public class CycleStats {
         return entitiesRemoved;
     }
 
-    public BaseComponent[] getBreakdown() {
-        List<BaseComponent> components = new ArrayList<>();
+    public Component getBreakdown() {
+        TextComponent.Builder breakdown = Component.text();
         boolean firstAction = true;
 
-        for (Action action : actionCounts.keySet()) {
-            int totalCount = actionCounts.get(action).values().stream()
-                    .mapToInt(value -> value)
-                    .sum();
-            String entityBreakdown = actionCounts.get(action).entrySet().stream()
-                    .sorted(Map.Entry.<EntityType, Integer>comparingByValue().reversed())
-                    .map(entry -> ChatColor.RED + "" + entry.getValue() + " " + ChatColor.GRAY + entry.getKey().name().toLowerCase())
-                    .collect(Collectors.joining(", "));
-            BaseComponent[] baseComponents = new ComponentBuilder()
-                    .append(firstAction ? "" : "\n\n")
-                    .append("- " + action.getName() + ": ").color(ChatColor.GOLD)
-                    .append(totalCount + "\n").color(ChatColor.RED)
-                    .append(TextComponent.fromLegacyText(entityBreakdown))
-                    .create();
-            components.addAll(Arrays.asList(baseComponents));
+        for (Map.Entry<Action, Map<EntityType, Integer>> actionEntry : actionCounts.entrySet()) {
+            int totalCount = 0;
+            for (int count : actionEntry.getValue().values()) {
+                totalCount += count;
+            }
+            if (!firstAction) {
+                breakdown.append(Component.newline()).append(Component.newline());
+            }
+            breakdown.append(Component.text("- " + actionEntry.getKey().getName() + ": ", NamedTextColor.GOLD))
+                    .append(Component.text(totalCount, NamedTextColor.RED))
+                    .append(Component.newline());
+
+            List<Map.Entry<EntityType, Integer>> entityCounts = new ArrayList<>(actionEntry.getValue().entrySet());
+            entityCounts.sort(Map.Entry.<EntityType, Integer>comparingByValue().reversed());
+            boolean firstEntity = true;
+            for (Map.Entry<EntityType, Integer> entityEntry : entityCounts) {
+                if (!firstEntity) {
+                    breakdown.append(Component.text(", ", NamedTextColor.GRAY));
+                }
+                breakdown.append(Component.text(entityEntry.getValue() + " ", NamedTextColor.RED))
+                        .append(Component.text(entityEntry.getKey().name().toLowerCase(Locale.ROOT), NamedTextColor.GRAY));
+                firstEntity = false;
+            }
             firstAction = false;
         }
-        return components.toArray(new BaseComponent[0]);
+        return breakdown.build();
     }
 
     public static class Builder {

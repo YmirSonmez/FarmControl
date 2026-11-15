@@ -1,7 +1,6 @@
 package com.froobworld.farmcontrol.hook.entitygetter;
 
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
-import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 
@@ -24,6 +23,9 @@ public class BukkitEntityGetterHook implements EntityGetterHook {
     @Override
     public CompletableFuture<List<SnapshotEntity>> getSnapshotEntities(World world, Class<?>... classes) {
         List<SnapshotEntity> snapshotEntities = new ArrayList<>();
+        if (world.getEntityCount() == 0) {
+            return CompletableFuture.completedFuture(snapshotEntities);
+        }
         for (Entity entity : world.getEntitiesByClasses(classes)) {
             snapshotEntities.add(new SnapshotEntity(entity));
         }

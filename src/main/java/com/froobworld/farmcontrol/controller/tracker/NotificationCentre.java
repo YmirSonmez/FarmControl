@@ -1,10 +1,10 @@
 package com.froobworld.farmcontrol.controller.tracker;
 
 import com.froobworld.farmcontrol.FarmControl;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -31,32 +31,32 @@ public class NotificationCentre {
     }
 
     public void notify(CycleStats cycleStats) {
-        ComponentBuilder notificationBuilder = new ComponentBuilder()
-                .append("FarmControl - ").color(ChatColor.GOLD)
-                .append("" + cycleStats.getAffectedEntityCount()).color(ChatColor.RED)
-                .append(" entities affected").color(ChatColor.GRAY);
+        if (notifiableUsers.isEmpty()) {
+            return;
+        }
+        TextComponent.Builder notificationBuilder = Component.text()
+                .append(Component.text("FarmControl - ", NamedTextColor.GOLD))
+                .append(Component.text(cycleStats.getAffectedEntityCount(), NamedTextColor.RED))
+                .append(Component.text(" entities affected", NamedTextColor.GRAY));
         if (cycleStats.getEntitiesRemoved() > 0) {
             notificationBuilder
-                    .append(", including ").color(ChatColor.GRAY)
-                    .append("" + cycleStats.getEntitiesRemoved()).color(ChatColor.RED)
-                    .append(" removed.").color(ChatColor.GRAY);
+                    .append(Component.text(", including ", NamedTextColor.GRAY))
+                    .append(Component.text(cycleStats.getEntitiesRemoved(), NamedTextColor.RED))
+                    .append(Component.text(" removed.", NamedTextColor.GRAY));
         } else {
-            notificationBuilder.append(".").color(ChatColor.GRAY);
+            notificationBuilder.append(Component.text(".", NamedTextColor.GRAY));
         }
-        BaseComponent[] breakdown = cycleStats.getBreakdown();
-        notificationBuilder.getParts().forEach(part -> part.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, breakdown)));
-        BaseComponent[] message = notificationBuilder.create();
+        Component message = notificationBuilder.hoverEvent(HoverEvent.showText(cycleStats.getBreakdown())).build();
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (!player.hasPermission("farmcontrol.command.notify")) {
+        for (UUID uuid : notifiableUsers) {
+            if (uuid.equals(CONSOLE_UUID)) {
+                Bukkit.getConsoleSender().sendMessage(message);
                 continue;
             }
-            if (notifiableUsers.contains(player.getUniqueId())) {
-                player.spigot().sendMessage(message);
+            Player player = Bukkit.getPlayer(uuid);
+            if (player != null && player.hasPermission("farmcontrol.command.notify")) {
+                player.sendMessage(message);
             }
-        }
-        if (notifiableUsers.contains(CONSOLE_UUID)) {
-            Bukkit.getConsoleSender().spigot().sendMessage(message);
         }
     }
 
@@ -97,8 +97,8 @@ public class NotificationCentre {
                     notifiableUsers.add(UUID.fromString(line));
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException | IllegalArgumentException e) {
+            farmControl.getSLF4JLogger().warn("Unable to load notifiable-users.txt", e);
         }
     }
 
@@ -110,7 +110,7 @@ public class NotificationCentre {
                 try {
                     userFile.createNewFile();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    farmControl.getSLF4JLogger().warn("Unable to create notifiable-users.txt", e);
                     return;
                 }
             }
@@ -119,7 +119,7 @@ public class NotificationCentre {
                     writer.println(uuid.toString());
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                farmControl.getSLF4JLogger().warn("Unable to save notifiable-users.txt", e);
             }
         });
     }

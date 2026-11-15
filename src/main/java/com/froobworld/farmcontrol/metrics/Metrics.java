@@ -6,14 +6,10 @@ import org.bstats.charts.CustomChart;
 import org.bstats.json.JsonObjectBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -44,13 +40,13 @@ public class Metrics {
             config.addDefault("logResponseStatusText", false);
 
             // Inform the server owners about bStats
-            config.options().header(
-                    "bStats (https://bStats.org) collects some basic information for plugin authors, like how\n" +
-                            "many people use their plugin and their total player count. It's recommended to keep bStats\n" +
-                            "enabled, but if you're not comfortable with this, you can turn this setting off. There is no\n" +
-                            "performance penalty associated with having metrics enabled, and data sent to bStats is fully\n" +
-                            "anonymous."
-            ).copyDefaults(true);
+            config.options().setHeader(List.of(
+                    "bStats (https://bStats.org) collects some basic information for plugin authors, like how",
+                    "many people use their plugin and their total player count. It's recommended to keep bStats",
+                    "enabled, but if you're not comfortable with this, you can turn this setting off. There is no",
+                    "performance penalty associated with having metrics enabled, and data sent to bStats is fully",
+                    "anonymous."
+            )).copyDefaults(true);
             try {
                 config.save(configFile);
             } catch (IOException ignored) { }
@@ -76,7 +72,8 @@ public class Metrics {
                 (message) -> this.plugin.getLogger().log(Level.INFO, message),
                 logErrors,
                 logSentData,
-                logResponseStatusText
+                logResponseStatusText,
+                false
         );
     }
 
@@ -110,20 +107,11 @@ public class Metrics {
     }
 
     private void appendServiceData(JsonObjectBuilder builder) {
-        builder.appendField("pluginVersion", plugin.getDescription().getVersion());
+        builder.appendField("pluginVersion", plugin.getPluginMeta().getVersion());
     }
 
     private int getPlayerAmount() {
-        try {
-            // Around MC 1.8 the return type was changed from an array to a collection,
-            // This fixes java.lang.NoSuchMethodError: org.bukkit.Bukkit.getOnlinePlayers()Ljava/util/Collection;
-            Method onlinePlayersMethod = Class.forName("org.bukkit.Server").getMethod("getOnlinePlayers");
-            return onlinePlayersMethod.getReturnType().equals(Collection.class)
-                    ? ((Collection<?>) onlinePlayersMethod.invoke(Bukkit.getServer())).size()
-                    : ((Player[]) onlinePlayersMethod.invoke(Bukkit.getServer())).length;
-        } catch (Exception e) {
-            return Bukkit.getOnlinePlayers().size(); // Just use the new method if the reflection failed
-        }
+        return Bukkit.getOnlinePlayers().size();
     }
 
 }

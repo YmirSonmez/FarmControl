@@ -26,7 +26,7 @@ public class FarmControl extends JavaPlugin {
         try {
             fcConfig.load();
         } catch (Exception e) {
-            e.printStackTrace();
+            getSLF4JLogger().error("Failed to load config.yml", e);
         }
         hookManager = new HookManager(this);
         hookManager.load();
@@ -38,7 +38,7 @@ public class FarmControl extends JavaPlugin {
         try {
             profileManager.load();
         } catch (IOException e) {
-            e.printStackTrace();
+            getSLF4JLogger().error("Failed to load profiles.yml", e);
             Bukkit.getPluginManager().disablePlugin(this);
             return;
         }
@@ -47,7 +47,7 @@ public class FarmControl extends JavaPlugin {
         try {
             messageManager.reload();
         } catch (Exception e) {
-            e.printStackTrace();
+            getSLF4JLogger().error("Failed to load messages.yml", e);
             Bukkit.getPluginManager().disablePlugin(this);
             return;
         }
@@ -113,10 +113,6 @@ public class FarmControl extends JavaPlugin {
     }
 
     public void registerCommands() {
-        FarmControlCommand farmControlCommand = new FarmControlCommand(this);
-        getCommand("farmcontrol").setExecutor(farmControlCommand);
-        getCommand("farmcontrol").setTabCompleter(farmControlCommand.getTabCompleter());
-        getCommand("farmcontrol").setPermission("farmcontrol.command.farmcontrol");
-        getCommand("farmcontrol").setPermissionMessage(FarmControlCommand.NO_PERMISSION_MESSAGE);
+        new FarmControlCommand(this).register();
     }
 }

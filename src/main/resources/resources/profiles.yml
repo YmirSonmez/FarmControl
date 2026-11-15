@@ -1,4 +1,24 @@
 # Please visit https://github.com/froobynooby/FarmControl/wiki/Profiles for help with making profiles.
+#
+# Group options:
+#   types / exclude-types: entity types or categories that can / cannot be in the group. Categories: animal, monster,
+#     golem, ambient, fish, water-animal, tameable, raider, villager, mob, vehicle, chest-boat, projectile
+#     (e.g. "category:animal").
+#   count: how many entities are needed to form a group.
+#   distance: how close (in blocks) entities must be to be grouped together, or same-chunk.
+#   ignore-vertical-distance: whether to only consider horizontal distance.
+#   pure: whether all entities in a group must be of the same type.
+#   spawn-reasons: (optional) only group entities that came into the world for one of these reasons, e.g. spawner,
+#     breeding, natural. All reasons are accepted if this is left out.
+#
+# Actions:
+#   remove-random-movement, remove-awareness, remove-ai, disable-collisions, disable-breeding, kill, remove
+#   disable-pathfinding: mobs keep their AI but can no longer find paths, so they stay where they are.
+#   lock-breeding: like disable-breeding, but stored on the adult animal itself (it cannot even enter love mode).
+#     Animals stay locked if the plugin is removed while the action is applied.
+#   disable-mob-pickup: for items - mobs will no longer pick the item up.
+#   prevent-spawn: stops more mobs of the group's types from spawning (naturally or from spawners) in the chunks the
+#     group occupies. Nothing is done to the mobs already there.
 
 profiles:
   # Remove random movements and disable collisions of mobs in animal farms
@@ -34,12 +54,40 @@ profiles:
       - remove-ai
       - disable-collisions
 
-  # Disable breeding in farms containing 20 or more animals of the same type
+  # Disable the collisions of villagers in trading halls and breeders
+  #  * Villagers do not use the goals that remove-random-movement removes, and still need to move to restock, so this
+  #    only stops them from constantly pushing each other around.
+  soft-nerf-villager-halls:
+    group:
+      types:
+        - "villager"
+      count: 15
+      distance: 8
+    actions:
+      - disable-collisions
+
+  # Remove the AI of mobs in monster farms
+  freeze-monster-farms:
+    group:
+      types:
+        - "category:monster"
+      exclude-types:
+        - wither
+        - warden
+        - elder_guardian
+      count: 30
+      distance: 8
+    actions:
+      - remove-ai
+      - disable-collisions
+
+  # Disable breeding in farms containing 24 or more animals of the same type
+  #  * 24 is the vanilla entity cramming limit, so pens holding more than this in one spot lose animals anyway.
   soft-limit-animal-farms:
     group:
       types:
         - "category:animal"
-      count: 20
+      count: 24
       distance: 5
       pure: true
     actions:
@@ -55,12 +103,12 @@ profiles:
     actions:
       - disable-breeding
 
-  # No more than 20 animals (all of the same type) within close proximity
+  # No more than 24 animals (all of the same type) within close proximity
   trim-animal-farms:
     group:
       types:
         - "category:animal"
-      count: 21
+      count: 25
       distance: 5
       pure: true
     actions:
@@ -86,3 +134,37 @@ profiles:
       distance: same-chunk
     actions:
       - kill
+
+  # No more than 30 spawner mobs of the same type around a spawner - further spawns are prevented rather than removed
+  limit-spawner-farms:
+    group:
+      types:
+        - "category:monster"
+      spawn-reasons:
+        - spawner
+      count: 30
+      distance: 8
+      pure: true
+    actions:
+      - prevent-spawn
+
+  # No more than 30 empty boats and minecarts within close proximity (chest boats and carts with an inventory are
+  # excluded by default in config.yml, as are vehicles with passengers)
+  trim-vehicle-piles:
+    group:
+      types:
+        - "category:vehicle"
+      count: 31
+      distance: 3
+    actions:
+      - remove
+
+  # Stop mobs from searching for and picking up items lying in large piles
+  nerf-item-piles:
+    group:
+      types:
+        - "item"
+      count: 50
+      distance: 5
+    actions:
+      - disable-mob-pickup

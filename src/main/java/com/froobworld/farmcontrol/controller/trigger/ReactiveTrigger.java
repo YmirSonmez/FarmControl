@@ -2,6 +2,7 @@ package com.froobworld.farmcontrol.controller.trigger;
 
 import com.froobworld.farmcontrol.FarmControl;
 import com.froobworld.farmcontrol.config.FcConfig;
+import org.bukkit.Bukkit;
 import org.bukkit.World;
 
 public class ReactiveTrigger extends Trigger {
@@ -14,6 +15,9 @@ public class ReactiveTrigger extends Trigger {
 
     @Override
     public TriggerStatus getTriggerStatus(World world) {
+        if (!Bukkit.getServerTickManager().isRunningNormally()) {
+            return TriggerStatus.IDLE; // the tick rate is being manipulated (/tick freeze, /tick sprint), so MSPT is meaningless
+        }
         double mspt = farmControl.getHookManager().getMsptTracker().getMspt();
         if (mspt >= farmControl.getFcConfig().worldSettings.of(world).reactiveModeSettings.triggerMsptThreshold.get()) {
             return TriggerStatus.TRIGGERED;
