@@ -2,7 +2,8 @@ package com.froobworld.farmcontrol.command;
 
 import com.froobworld.farmcontrol.FarmControl;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FarmControlCommand implements CommandExecutor {
-    public static final String NO_PERMISSION_MESSAGE = ChatColor.RED + "You don't have permission to use this command.";
+    public static final Component NO_PERMISSION_MESSAGE = Component.text("You don't have permission to use this command.", NamedTextColor.RED);
     private final FarmControl farmControl;
 
     private final ReloadCommand reloadCommand;
@@ -75,9 +76,9 @@ public class FarmControlCommand implements CommandExecutor {
     }
 
     private void sendHelp(CommandSender sender, String cl) {
-        sender.sendMessage(ChatColor.YELLOW + "FarmControl v" + farmControl.getDescription().getVersion());
-        sender.sendMessage(ChatColor.YELLOW + "GitHub: " + ChatColor.WHITE + "https://github.com/froobynooby/FarmControl/");
-        sender.sendMessage("");
+        sender.sendMessage(Component.text("FarmControl v" + farmControl.getPluginMeta().getVersion(), NamedTextColor.YELLOW));
+        sender.sendMessage(Component.text("GitHub: ", NamedTextColor.YELLOW).append(Component.text("https://github.com/froobynooby/FarmControl/", NamedTextColor.WHITE)));
+        sender.sendMessage(Component.empty());
         if (sender.hasPermission("farmcontrol.command.reload")) {
             sender.sendMessage("/" + cl + " reload");
         }

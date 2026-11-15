@@ -2,19 +2,21 @@ package com.froobworld.farmcontrol.controller.entity;
 
 import com.froobworld.farmcontrol.data.FcData;
 import org.bukkit.DyeColor;
+import org.bukkit.Location;
 import org.bukkit.entity.*;
 import org.bukkit.material.Colorable;
-import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * An immutable view of an entity, captured on the thread owning the entity so that it can be inspected asynchronously.
+ */
 public class SnapshotEntity {
-    private static final AtomicBoolean useWoodType = new AtomicBoolean(false);
     private final Entity entity;
+    private final EntityType entityType;
     private final int entityId;
-    private final Vector location;
+    private final int blockX, blockY, blockZ;
     private final FcData fcData;
     private final boolean leashed;
     private final boolean loveMode;
@@ -24,47 +26,38 @@ public class SnapshotEntity {
     private final int ticksLived;
     private final boolean pickupable;
     private final boolean mounted;
-    private final List<Object> classifications = new ArrayList<>();
+    private final List<Object> classifications = new ArrayList<>(2);
 
     public SnapshotEntity(Entity entity) {
         this.entity = entity;
+        this.entityType = entity.getType();
         this.entityId = entity.getEntityId();
-        this.location = entity.getLocation().toVector();
+        Location location = entity.getLocation();
+        this.blockX = location.getBlockX();
+        this.blockY = location.getBlockY();
+        this.blockZ = location.getBlockZ();
         this.fcData = FcData.get(entity);
-        this.leashed = entity instanceof Mob && ((Mob) entity).isLeashed();
-        this.loveMode = entity instanceof Animals && ((Animals) entity).isLoveMode();
-        this.customName = entity.getCustomName() != null;
-        this.tamed = entity instanceof Tameable && ((Tameable) entity).isTamed();
-        this.isPatrolLeader = entity instanceof Raider && ((Raider) entity).isPatrolLeader();
-        this.pickupable = entity instanceof AbstractArrow && ((AbstractArrow) entity).getPickupStatus() == AbstractArrow.PickupStatus.ALLOWED;
+        this.leashed = entity instanceof Mob mob && mob.isLeashed();
+        this.loveMode = entity instanceof Animals animals && animals.isLoveMode();
+        this.customName = entity.customName() != null;
+        this.tamed = entity instanceof Tameable tameable && tameable.isTamed();
+        this.isPatrolLeader = entity instanceof Raider raider && raider.isPatrolLeader();
+        this.pickupable = entity instanceof AbstractArrow arrow && arrow.getPickupStatus() == AbstractArrow.PickupStatus.ALLOWED;
         this.ticksLived = entity.getTicksLived();
         this.mounted = !entity.getPassengers().isEmpty();
-        classifications.add(entity.getType());
-        if (entity instanceof Colorable) {
-            DyeColor colour = ((Colorable) entity).getColor();
+        // boats need no further classification, each wood type is its own entity type
+        classifications.add(entityType);
+        if (entity instanceof Colorable colorable) {
+            DyeColor colour = colorable.getColor();
             if (colour != null) {
                 classifications.add(colour);
             }
         }
-        if (entity instanceof Villager) {
-            classifications.add(((Villager) entity).getProfession());
+        if (entity instanceof Villager villager) {
+            classifications.add(villager.getProfession());
         }
-        if (entity instanceof Item) {
-            classifications.add(((Item) entity).getItemStack().getType());
-        }
-        if (entity instanceof Boat) {
-            // try to add boat type, falling back to wood type for version < 1.19
-            if (!SnapshotEntity.useWoodType.get()) {
-                try {
-                    classifications.add(((Boat) entity).getBoatType());
-                } catch (Throwable throwable) {
-                    useWoodType.set(true);
-                }
-            }
-            if (SnapshotEntity.useWoodType.get()) {
-                //noinspection deprecation
-                classifications.add(((Boat) entity).getWoodType());
-            }
+        if (entity instanceof Item item) {
+            classifications.add(item.getItemStack().getType());
         }
     }
 
@@ -77,11 +70,27 @@ public class SnapshotEntity {
     }
 
     public EntityType getEntityType() {
-        return entity.getType();
+        return entityType;
     }
 
-    public Vector getLocation() {
-        return location;
+    public int getBlockX() {
+        return blockX;
+    }
+
+    public int getBlockY() {
+        return blockY;
+    }
+
+    public int getBlockZ() {
+        return blockZ;
+    }
+
+    public int getChunkX() {
+        return blockX >> 4;
+    }
+
+    public int getChunkZ() {
+        return blockZ >> 4;
     }
 
     public FcData getFcData() {

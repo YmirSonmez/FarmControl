@@ -2,7 +2,8 @@ package com.froobworld.farmcontrol.command;
 
 import com.froobworld.farmcontrol.FarmControl;
 import com.froobworld.farmcontrol.controller.tracker.NotificationCentre;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -20,9 +21,9 @@ public class NotifyCommand implements CommandExecutor {
         NotificationCentre notificationCentre = farmControl.getFarmController().getCycleHistoryManager().getNotificationCentre();
         notificationCentre.setNotifiable(sender, !notificationCentre.isNotifiable(sender));
         if (notificationCentre.isNotifiable(sender)) {
-            sender.sendMessage(ChatColor.YELLOW + "FarmControl will now notify you of actions it performs.");
+            sender.sendMessage(Component.text("FarmControl will now notify you of actions it performs.", NamedTextColor.YELLOW));
         } else {
-            sender.sendMessage(ChatColor.YELLOW + "FarmControl will no longer notify you of actions it performs.");
+            sender.sendMessage(Component.text("FarmControl will no longer notify you of actions it performs.", NamedTextColor.YELLOW));
         }
         return true;
     }

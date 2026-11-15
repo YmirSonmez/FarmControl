@@ -17,14 +17,6 @@ public class RegionisedSchedulerHook implements SchedulerHook {
     }
 
     @Override
-    public ScheduledTask runTaskAsap(Runnable runnable) {
-        if (Bukkit.isGlobalTickThread()) {
-            runnable.run();
-        }
-        return runTask(runnable);
-    }
-
-    @Override
     public ScheduledTask runRepeatingTask(Runnable runnable, long initDelay, long period) {
         return new RegionisedScheduledTask(Bukkit.getGlobalRegionScheduler().runAtFixedRate(farmControl, task -> runnable.run(), initDelay, period));
     }
@@ -39,15 +31,7 @@ public class RegionisedSchedulerHook implements SchedulerHook {
     public ScheduledTask runEntityTaskAsap(Runnable runnable, Runnable retired, Entity entity) {
         if (Bukkit.isOwnedByCurrentRegion(entity)) {
             runnable.run();
-            return new ScheduledTask() {
-                @Override
-                public void cancel() {}
-
-                @Override
-                public boolean isCancelled() {
-                    return false;
-                }
-            };
+            return ScheduledTask.COMPLETED;
         }
         return runEntityTask(runnable, retired, entity);
     }

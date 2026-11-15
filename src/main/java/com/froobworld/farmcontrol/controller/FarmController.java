@@ -75,8 +75,8 @@ public class FarmController {
                 triggerProfileMap.computeIfAbsent(reactiveTrigger, trigger -> new HashSet<>()).add(actionProfile);
             }
         } else {
-            if (!farmControl.getFcConfig().worldSettings.of(world).profiles.proactive.get().isEmpty()) {
-                farmControl.getLogger().warning("Reactive mode is not supported on your version - ignoring reactive profiles for world '" + world.getName() + "'");
+            if (!farmControl.getFcConfig().worldSettings.of(world).profiles.reactive.get().isEmpty()) {
+                farmControl.getLogger().warning("Reactive mode is not supported on regionised (Folia) servers - ignoring reactive profiles for world '" + world.getName() + "'");
             }
         }
     }

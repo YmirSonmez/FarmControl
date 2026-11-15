@@ -3,18 +3,17 @@ package com.froobworld.farmcontrol;
 import com.froobworld.farmcontrol.hook.entitygetter.BukkitEntityGetterHook;
 import com.froobworld.farmcontrol.hook.entitygetter.EntityGetterHook;
 import com.froobworld.farmcontrol.hook.entitygetter.RegionisedEntityGetterHook;
-import com.froobworld.farmcontrol.hook.nms.NmsHooks;
+import com.froobworld.farmcontrol.hook.goal.MobGoalHook;
 import com.froobworld.farmcontrol.hook.scheduler.BukkitSchedulerHook;
 import com.froobworld.farmcontrol.hook.scheduler.RegionisedSchedulerHook;
 import com.froobworld.farmcontrol.hook.scheduler.SchedulerHook;
 import com.froobworld.farmcontrol.hook.tick.PaperTickHook;
-import com.froobworld.farmcontrol.hook.tick.BukkitTickHook;
 import com.froobworld.farmcontrol.hook.tick.TickHook;
 import com.froobworld.farmcontrol.utils.MsptTracker;
 
 public class HookManager {
     private final FarmControl farmControl;
-    private final NmsHooks nmsHooks;
+    private final MobGoalHook mobGoalHook;
     private final TickHook tickHook;
     private final SchedulerHook schedulerHook;
     private final EntityGetterHook entityGetterHook;
@@ -22,27 +21,16 @@ public class HookManager {
 
     public HookManager(FarmControl farmControl) {
         this.farmControl = farmControl;
-        nmsHooks = new NmsHooks();
+        mobGoalHook = MobGoalHook.create();
         if (RegionisedSchedulerHook.isCompatible()) {
+            // regionised (Folia) servers have no single server tick to measure
             schedulerHook = new RegionisedSchedulerHook(farmControl);
+            entityGetterHook = new RegionisedEntityGetterHook(farmControl);
+            tickHook = null;
         } else {
             schedulerHook = new BukkitSchedulerHook(farmControl);
-        }
-        if (RegionisedSchedulerHook.isCompatible()) {
-            tickHook = null;
-        } else if (PaperTickHook.isCompatible()) {
-            tickHook = new PaperTickHook();
-        } else if (nmsHooks.getTickTimeNmsHook() != null) {
-            tickHook = new BukkitTickHook(schedulerHook, nmsHooks.getTickTimeNmsHook());
-        } else {
-            tickHook = null;
-        }
-        if (RegionisedEntityGetterHook.isCompatible()) {
-            entityGetterHook = new RegionisedEntityGetterHook(farmControl);
-        } else {
             entityGetterHook = new BukkitEntityGetterHook();
-        }
-        if (tickHook != null) {
+            tickHook = new PaperTickHook();
             tickHook.register(farmControl);
         }
     }
@@ -80,7 +68,7 @@ public class HookManager {
         return entityGetterHook;
     }
 
-    public NmsHooks getNmsHooks() {
-        return nmsHooks;
+    public MobGoalHook getMobGoalHook() {
+        return mobGoalHook;
     }
 }

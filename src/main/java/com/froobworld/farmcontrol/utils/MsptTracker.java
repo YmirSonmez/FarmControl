@@ -2,25 +2,27 @@ package com.froobworld.farmcontrol.utils;
 
 import com.froobworld.farmcontrol.hook.tick.TickHook;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
+import java.util.function.LongConsumer;
 
+/**
+ * Tracks the median tick duration over the most recent ticks.
+ */
 public class MsptTracker {
-    private static final long MILLIS_PER_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
-    private final Consumer<Long> tickConsumer = this::onTickEnd;
+    private static final double NANOS_PER_MILLI = TimeUnit.MILLISECONDS.toNanos(1);
+    private static final double DEFAULT_MSPT = 25.0;
+    private final LongConsumer tickConsumer = this::onTickEnd;
     private final TickHook tickHook;
-    private final int collectionPeriod;
-    private final Queue<Long> tickDurations;
-    private Double cachedMspt;
+    private final long[] tickDurations; // ring buffer
+    private int size;
+    private int nextIndex;
+    private double cachedMspt = DEFAULT_MSPT;
+    private boolean dirty;
 
     public MsptTracker(int collectionPeriod, TickHook tickHook) {
         this.tickHook = tickHook;
-        this.collectionPeriod = collectionPeriod <= 0 ? 1200 : collectionPeriod;
-        tickDurations = new ArrayDeque<>();
+        tickDurations = new long[collectionPeriod <= 0 ? 1200 : collectionPeriod];
     }
 
     public void register() {
@@ -29,30 +31,36 @@ public class MsptTracker {
 
     public void unregister() {
         tickHook.removeTickConsumer(tickConsumer);
-        tickDurations.clear();
+        size = 0;
+        nextIndex = 0;
+        cachedMspt = DEFAULT_MSPT;
+        dirty = false;
     }
 
     public double getMspt() {
-        if (cachedMspt == null) {
-            List<Long> sortedTickDurations = new ArrayList<>(tickDurations);
-            sortedTickDurations.sort(null);
-            if (sortedTickDurations.isEmpty()) {
-                cachedMspt = 25.0;
-            } else if (sortedTickDurations.size() % 2 == 0) {
-                cachedMspt = 0.5 * (sortedTickDurations.get(sortedTickDurations.size() / 2) + sortedTickDurations.get(sortedTickDurations.size() / 2 - 1)) / MILLIS_PER_NANOS;
+        if (dirty) {
+            long[] sorted = Arrays.copyOf(tickDurations, size);
+            Arrays.sort(sorted);
+            int middle = size / 2;
+            if (size % 2 == 0) {
+                cachedMspt = 0.5 * (sorted[middle] + sorted[middle - 1]) / NANOS_PER_MILLI;
             } else {
-                cachedMspt = (double) sortedTickDurations.get(sortedTickDurations.size() / 2) / MILLIS_PER_NANOS;
+                cachedMspt = sorted[middle] / NANOS_PER_MILLI;
             }
+            dirty = false;
         }
         return cachedMspt;
     }
 
     private void onTickEnd(long tickDuration) {
-        if (tickDurations.size() >= collectionPeriod) {
-            tickDurations.remove();
+        tickDurations[nextIndex] = tickDuration;
+        if (++nextIndex == tickDurations.length) {
+            nextIndex = 0;
         }
-        tickDurations.add(tickDuration);
-        cachedMspt = null;
+        if (size < tickDurations.length) {
+            size++;
+        }
+        dirty = true;
     }
 
 }

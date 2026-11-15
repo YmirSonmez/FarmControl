@@ -6,8 +6,6 @@ public interface SchedulerHook {
 
     ScheduledTask runTask(Runnable runnable);
 
-    ScheduledTask runTaskAsap(Runnable runnable);
-
     ScheduledTask runRepeatingTask(Runnable runnable, long initDelay, long period);
 
     ScheduledTask runEntityTask(Runnable runnable, Runnable retired, Entity entity);

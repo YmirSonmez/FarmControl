@@ -4,6 +4,7 @@ import com.froobworld.farmcontrol.FarmControl;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import com.froobworld.farmcontrol.utils.EntityCategory;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.EntityType;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -30,14 +31,11 @@ public class GroupDefinition {
         this.sameChunk = sameChunk;
         this.ignoreVerticalDistance = ignoreVerticalDistance;
         this.pure = pure;
-        this.typePredicate = memberCategories.stream()
-                .map(EntityCategory::asSnapshotEntityPredicate)
-                .reduce(Predicate::or)
-                .orElse(snapshotEntity -> false); // require explicit specification of types by defaulting to false
-        this.excludeTypePredicate = excludedCategories.stream()
-                .map(EntityCategory::asSnapshotEntityPredicate)
-                .reduce(Predicate::or)
-                .orElse(snapshotEntity -> false);
+        // types must be explicitly specified, so an empty set of categories matches nothing
+        Set<EntityType> memberTypes = EntityCategory.unionOfMemberTypes(memberCategories);
+        Set<EntityType> excludedTypes = EntityCategory.unionOfMemberTypes(excludedCategories);
+        this.typePredicate = snapshotEntity -> memberTypes.contains(snapshotEntity.getEntityType());
+        this.excludeTypePredicate = snapshotEntity -> excludedTypes.contains(snapshotEntity.getEntityType());
     }
 
     public Set<EntityCategory> getMemberCategories() {

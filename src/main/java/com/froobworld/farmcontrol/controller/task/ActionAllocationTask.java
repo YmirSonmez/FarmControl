@@ -26,10 +26,10 @@ public class ActionAllocationTask implements Runnable {
     private final List<SnapshotEntity> snapshotEntities;
     private final Map<Trigger, Set<ActionProfile>> actionProfiles;
     private final Predicate<SnapshotEntity> shouldExcludePredicate;
-    private final Set<Action> allActions;
+    private final Collection<Action> allActions;
     private final CycleTracker cycleTracker;
 
-    public ActionAllocationTask(FarmController farmController, World world, SchedulerHook schedulerHook, Set<Trigger> triggers, List<SnapshotEntity> snapshotEntities, Map<Trigger, Set<ActionProfile>> actionProfiles, Predicate<SnapshotEntity> shouldExcludePredicate, Set<Action> allActions, CycleTracker cycleTracker) {
+    public ActionAllocationTask(FarmController farmController, World world, SchedulerHook schedulerHook, Set<Trigger> triggers, List<SnapshotEntity> snapshotEntities, Map<Trigger, Set<ActionProfile>> actionProfiles, Predicate<SnapshotEntity> shouldExcludePredicate, Collection<Action> allActions, CycleTracker cycleTracker) {
         this.farmController = farmController;
         this.world = world;
         this.schedulerHook = schedulerHook;
@@ -52,6 +52,7 @@ public class ActionAllocationTask implements Runnable {
         triggerActionProfilePairs.sort(Comparator.comparingInt(pair -> pair.actionProfile.removes() ? -1 : 1));
         for (TriggerActionProfilePair triggerProfilePair : triggerActionProfilePairs) {
             boolean removes = triggerProfilePair.actionProfile.removes();
+            Set<SnapshotEntity> removedEntities = removes ? new HashSet<>() : Collections.emptySet();
             EntityGrouperResult result = EntityGrouper.groupEntities(snapshotEntities, triggerProfilePair.actionProfile.getGroupDefinition());
             for (Group group : result.getGroups()) {
                 MixedEntitySet.MixedEntityIterator iterator = group.getMembers().iterator();
@@ -62,7 +63,7 @@ public class ActionAllocationTask implements Runnable {
                         continue;
                     }
                     if (removes) {
-                        snapshotEntities.remove(next);
+                        removedEntities.add(next);
                         iterator.remove();
                     }
                     Set<TriggerActionPair> triggerActionPairs = triggerActionMap.computeIfAbsent(next, e -> new HashSet<>());
@@ -77,17 +78,29 @@ public class ActionAllocationTask implements Runnable {
                     }
                 }
             }
+            if (!removedEntities.isEmpty()) {
+                // entities to be removed are not considered by subsequent profiles; drop them all in a single pass
+                snapshotEntities.removeIf(removedEntities::contains);
+            }
         }
         for (SnapshotEntity entity : snapshotEntities) {
             FcData fcData = entity.getFcData();
-            Set<String> appliedActions;
+            if (fcData == null) {
+                continue;
+            }
+            Set<TriggerActionPair> triggerActionPairs = triggerActionMap.getOrDefault(entity, Collections.emptySet());
             for (Trigger trigger : triggers) {
-                if (fcData != null && (appliedActions = fcData.getActions(trigger)) != null && !appliedActions.isEmpty()) {
-                    for (Action action : allActions) {
-                        TriggerActionPair triggerActionPair = new TriggerActionPair(trigger, action);
-                        if (appliedActions.contains(action.getName()) && !triggerActionMap.getOrDefault(entity, Collections.emptySet()).contains(triggerActionPair)) {
-                            unTriggerActionMap.computeIfAbsent(entity, e -> new HashSet<>()).add(triggerActionPair);
-                        }
+                Set<String> appliedActions = fcData.getActions(trigger);
+                if (appliedActions == null || appliedActions.isEmpty()) {
+                    continue;
+                }
+                for (Action action : allActions) {
+                    if (!appliedActions.contains(action.getName())) {
+                        continue;
+                    }
+                    TriggerActionPair triggerActionPair = new TriggerActionPair(trigger, action);
+                    if (!triggerActionPairs.contains(triggerActionPair)) {
+                        unTriggerActionMap.computeIfAbsent(entity, e -> new HashSet<>()).add(triggerActionPair);
                     }
                 }
             }

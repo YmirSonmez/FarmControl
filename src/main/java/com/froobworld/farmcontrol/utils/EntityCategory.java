@@ -4,73 +4,67 @@ import com.froobworld.farmcontrol.controller.action.Action;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import org.bukkit.entity.*;
 
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class EntityCategory {
-    private static final Map<String, EntityCategory> entityCategoryMap;
+    private static final Map<String, EntityCategory> entityCategoryMap = new HashMap<>();
     private final String name;
-    private final boolean allowInheritance;
-    private final Class<?>[] memberClasses;
+    private final Set<EntityType> memberTypes = EnumSet.noneOf(EntityType.class); // resolved once, membership never changes
 
     static {
-        List<EntityCategory> entityCategories = new ArrayList<>();
         for (EntityType entityType : EntityType.values()) {
-            Class<?> entityTypeClass = entityType.getEntityClass();
-            if (entityTypeClass != null) {
-                entityCategories.add(new EntityCategory(entityType.toString().toLowerCase(), false, entityTypeClass));
+            if (entityType.getEntityClass() != null) {
+                register(new EntityCategory(entityType.toString().toLowerCase(Locale.ROOT), false, entityType.getEntityClass()));
             }
         }
-        entityCategories.addAll(
-                List.of(
-                        new EntityCategory("category:animal", true, Animals.class),
-                        new EntityCategory("category:monster", true, Monster.class),
-                        new EntityCategory("category:golem", true, Golem.class),
-                        new EntityCategory("category:ambient", true, Ambient.class),
-                        new EntityCategory("category:fish", true, Fish.class),
-                        new EntityCategory("category:tameable", true, Tameable.class),
-                        new EntityCategory("category:raider", true, Raider.class),
-                        new EntityCategory("category:mob", true, Mob.class),
-                        new EntityCategory("category:vehicle", true, Boat.class, Minecart.class),
-                        new EntityCategory("category:projectile", true, Projectile.class)
-                )
-        );
+        register(new EntityCategory("category:animal", true, Animals.class));
+        register(new EntityCategory("category:monster", true, Monster.class));
+        register(new EntityCategory("category:golem", true, Golem.class));
+        register(new EntityCategory("category:ambient", true, Ambient.class));
+        register(new EntityCategory("category:fish", true, Fish.class));
+        register(new EntityCategory("category:tameable", true, Tameable.class));
+        register(new EntityCategory("category:raider", true, Raider.class));
+        register(new EntityCategory("category:mob", true, Mob.class));
+        register(new EntityCategory("category:vehicle", true, Boat.class, Minecart.class));
+        register(new EntityCategory("category:projectile", true, Projectile.class));
+    }
 
-        entityCategoryMap = new HashMap<>();
-        entityCategories.forEach(entityCategory -> entityCategoryMap.put(entityCategory.name, entityCategory));
+    private static void register(EntityCategory entityCategory) {
+        entityCategoryMap.put(entityCategory.name, entityCategory);
     }
 
     private EntityCategory(String name, boolean allowInheritance, Class<?>... memberClasses) {
         this.name = name;
-        this.allowInheritance = allowInheritance;
-        this.memberClasses = memberClasses;
+        for (EntityType entityType : EntityType.values()) {
+            Class<?> entityClass = entityType.getEntityClass();
+            if (entityClass == null) {
+                continue;
+            }
+            for (Class<?> memberClass : memberClasses) {
+                if (allowInheritance ? memberClass.isAssignableFrom(entityClass) : memberClass.equals(entityClass)) {
+                    memberTypes.add(entityType);
+                    break;
+                }
+            }
+        }
     }
 
     public String getName() {
         return name;
     }
 
-    public boolean isMember(Class<?> entityClass) {
-        for (Class<?> memberClass : memberClasses) {
-            if (allowInheritance ? memberClass.isAssignableFrom(entityClass) : memberClass.equals(entityClass)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public boolean isMember(SnapshotEntity entity) {
-        return isMember(entity.getEntityType());
+        return memberTypes.contains(entity.getEntityType());
     }
 
     public boolean isMember(EntityType entityType) {
-        if (entityType.getEntityClass() == null) {
-            return false;
-        }
-        return isMember(entityType.getEntityClass());
+        return memberTypes.contains(entityType);
     }
 
     public Predicate<SnapshotEntity> asSnapshotEntityPredicate() {
@@ -78,19 +72,25 @@ public class EntityCategory {
     }
 
     public boolean isCompatibleWith(Action action) {
-        for (EntityType entityType : EntityType.values()) {
-            if (isMember(entityType)) {
-                Class<?> entityTypeClass = entityType.getEntityClass();
-                if (entityTypeClass != null && action.getEntityClass().isAssignableFrom(entityTypeClass)) {
-                    return true;
-                }
+        for (EntityType entityType : memberTypes) {
+            Class<?> entityTypeClass = entityType.getEntityClass();
+            if (entityTypeClass != null && action.getEntityClass().isAssignableFrom(entityTypeClass)) {
+                return true;
             }
         }
         return false;
     }
 
+    public static Set<EntityType> unionOfMemberTypes(Collection<EntityCategory> entityCategories) {
+        Set<EntityType> union = EnumSet.noneOf(EntityType.class);
+        for (EntityCategory entityCategory : entityCategories) {
+            union.addAll(entityCategory.memberTypes);
+        }
+        return union;
+    }
+
     public static EntityCategory ofName(String categoryName) {
-        return EntityCategory.entityCategoryMap.get(categoryName.toLowerCase());
+        return EntityCategory.entityCategoryMap.get(categoryName.toLowerCase(Locale.ROOT));
     }
 
 }

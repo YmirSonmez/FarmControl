@@ -59,8 +59,7 @@ public class ProfileManager {
                 }
                 actionProfileMap.put(name, new ActionProfile(groupDefinition, actions));
             } catch (Exception ex) {
-                ex.printStackTrace();
-                farmControl.getLogger().warning("Unable to load the profile '" + name + "'. Incorrect syntax?");
+                farmControl.getSLF4JLogger().warn("Unable to load the profile '{}'. Incorrect syntax?", name, ex);
             }
         }
     }

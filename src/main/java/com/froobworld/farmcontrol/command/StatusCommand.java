@@ -5,7 +5,8 @@ import com.froobworld.farmcontrol.controller.FarmController;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import com.froobworld.farmcontrol.data.FcData;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -19,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class StatusCommand implements CommandExecutor {
-    private FarmControl farmControl;
+    private final FarmControl farmControl;
 
     public StatusCommand(FarmControl farmControl) {
         this.farmControl = farmControl;
@@ -33,14 +34,14 @@ public class StatusCommand implements CommandExecutor {
             if (sender instanceof Player) {
                 world = ((Player) sender).getWorld();
             } else {
-                sender.sendMessage(ChatColor.RED + "You must specify a world.");
+                sender.sendMessage(Component.text("You must specify a world.", NamedTextColor.RED));
                 return false;
             }
         } else {
             world = Bukkit.getWorld(args[1]);
         }
         if (world == null) {
-            sender.sendMessage(ChatColor.RED + "Unknown world.");
+            sender.sendMessage(Component.text("Unknown world.", NamedTextColor.RED));
             return true;
         }
         AtomicInteger entityCount = new AtomicInteger(0);
@@ -62,16 +63,22 @@ public class StatusCommand implements CommandExecutor {
             completableFuture.complete(null);
         });
         completableFuture.thenRunAsync(() -> {
-            sender.sendMessage(ChatColor.GRAY + "Status for world '" + ChatColor.RED + world.getName() + ChatColor.GRAY + "'");
-            sender.sendMessage("");
-            sender.sendMessage(ChatColor.GOLD + "Total entities: " + ChatColor.RED + entityCount);
-            sender.sendMessage(ChatColor.GOLD + "Total affected entities: " + ChatColor.RED + affectedCount);
+            sender.sendMessage(Component.text()
+                    .append(Component.text("Status for world '", NamedTextColor.GRAY))
+                    .append(Component.text(world.getName(), NamedTextColor.RED))
+                    .append(Component.text("'", NamedTextColor.GRAY))
+                    .build());
+            sender.sendMessage(Component.empty());
+            sender.sendMessage(Component.text("Total entities: ", NamedTextColor.GOLD).append(Component.text(entityCount.get(), NamedTextColor.RED)));
+            sender.sendMessage(Component.text("Total affected entities: ", NamedTextColor.GOLD).append(Component.text(affectedCount.get(), NamedTextColor.RED)));
             if (affectedCount.get() > 0) {
-                sender.sendMessage("");
-                sender.sendMessage(ChatColor.GOLD + "Breakdown:");
-                for (String action : actionCount.keySet()) {
-                    sender.sendMessage(ChatColor.GOLD + "- " + ChatColor.GRAY + action + ": " + ChatColor.RED + actionCount.get(action));
-                }
+                sender.sendMessage(Component.empty());
+                sender.sendMessage(Component.text("Breakdown:", NamedTextColor.GOLD));
+                actionCount.forEach((action, count) -> sender.sendMessage(Component.text()
+                        .append(Component.text("- ", NamedTextColor.GOLD))
+                        .append(Component.text(action + ": ", NamedTextColor.GRAY))
+                        .append(Component.text(count.get(), NamedTextColor.RED))
+                        .build()));
             }
         });
         return true;

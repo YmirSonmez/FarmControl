@@ -4,8 +4,10 @@ import com.froobworld.farmcontrol.FarmControl;
 import com.froobworld.farmcontrol.config.FcConfig;
 import com.froobworld.farmcontrol.controller.entity.SnapshotEntity;
 import org.bukkit.World;
+import org.bukkit.entity.EntityType;
 
-import java.util.List;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.function.Predicate;
 
 public class ExclusionManager {
@@ -19,11 +21,18 @@ public class ExclusionManager {
         FcConfig.WorldSettings.ExclusionSettings exclusionSettings = farmControl.getFcConfig().worldSettings.of(world).exclusionSettings;
         boolean excludeLeashed = exclusionSettings.leashed.get();
         boolean excludeLoveMode = exclusionSettings.loveMode.get();
-        List<String> excludeMeta = exclusionSettings.metadata.get();
+        String[] excludeMeta = exclusionSettings.metadata.get().toArray(new String[0]);
         boolean excludeNamed = exclusionSettings.named.get();
         boolean excludeTamed = exclusionSettings.tamed.get();
         boolean excludePatrolLeaders = exclusionSettings.patrolLeader.get();
-        List<String> excludeType = exclusionSettings.type.get();
+        Set<EntityType> excludeType = EnumSet.noneOf(EntityType.class);
+        for (String typeName : exclusionSettings.type.get()) {
+            for (EntityType entityType : EntityType.values()) {
+                if (entityType.toString().equalsIgnoreCase(typeName)) {
+                    excludeType.add(entityType);
+                }
+            }
+        }
         long excludeTicksLived = exclusionSettings.youngerThan.get();
         boolean excludePickupable = exclusionSettings.pickupable.get();
         boolean excludeMounted = exclusionSettings.mounted.get();
@@ -52,13 +61,11 @@ public class ExclusionManager {
             if (snapshotEntity.getTicksLived() < excludeTicksLived) {
                 return true;
             }
+            if (excludeType.contains(snapshotEntity.getEntityType())) {
+                return true;
+            }
             for (String meta : excludeMeta) {
                 if (snapshotEntity.hasMetadata(meta)) {
-                    return true;
-                }
-            }
-            for (String type : excludeType) {
-                if (snapshotEntity.getEntityType().toString().equalsIgnoreCase(type)) {
                     return true;
                 }
             }
